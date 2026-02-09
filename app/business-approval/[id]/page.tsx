@@ -1,31 +1,131 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { AxiosError } from 'axios';
 import DashboardLayout from '@/app/components/DashboardLayout';
-
-const dummyData = {
-  business: {
-    name: 'Grooming Center',
-    owner: 'Emma Foster',
-    id: '123456789',
-    email: 'groomingcenter1212@gmail.com',
-    city: 'Saskatoon',
-    category: 'Pets',
-    logoUrl: '',
-  },
-  verificationDocument: {
-    name: 'Business License',
-    fileName: 'Groomingcenter.jpg',
-  },
-  businessVideo: {
-    name: 'Business Video',
-    fileName: 'Groomingcenter',
-    status: 'Approved',
-  },
-};
+import VerificationModal from '@/app/components/VerificationModal';
+import {
+  fetchVerificationById,
+  approveVerification,
+  rejectVerification,
+  type VerificationDetail,
+} from '@/lib/api';
 
 export default function VerificationDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const verificationId = params.id as string;
+
+  const [verification, setVerification] = useState<VerificationDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+
+  useEffect(() => {
+    async function loadVerification() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await fetchVerificationById(verificationId);
+        setVerification(data);
+      } catch (err) {
+        console.error('Failed to fetch verification:', err);
+        setError('Failed to load verification details');
+        toast.error('Failed to load verification details');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (verificationId) {
+      loadVerification();
+    }
+  }, [verificationId]);
+
+  const handleApprove = async (verificationId: string) => {
+    try {
+      const response = await approveVerification(verificationId);
+
+      // Update local state with new verification status
+      setVerification((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED',
+            }
+          : prev
+      );
+
+      toast.success('Business verification approved successfully');
+      setShowDocumentModal(false);
+    } catch (error) {
+      console.error('Failed to approve verification:', error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errorMessage = axiosError.response?.data?.message || 'Failed to approve verification';
+      toast.error(errorMessage);
+      setShowDocumentModal(false);
+    }
+  };
+
+  const handleReject = async (verificationId: string, reason: string) => {
+    try {
+      const response = await rejectVerification(verificationId, reason);
+
+      // Update local state with new verification status
+      setVerification((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED',
+              rejectionReason: reason,
+            }
+          : prev
+      );
+
+      toast.success('Business verification rejected successfully');
+      setShowDocumentModal(false);
+    } catch (error) {
+      console.error('Failed to reject verification:', error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errorMessage = axiosError.response?.data?.message || 'Failed to reject verification';
+      toast.error(errorMessage);
+      setShowDocumentModal(false);
+    }
+  };
+
+  const formatFileType = (type: string): string => {
+    return type.replace('BUSINESS_', '');
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !verification) {
+    return (
+      <DashboardLayout>
+        <div className="p-8 max-w-6xl">
+          <div className="text-center py-12">
+            <p className="text-red-500 text-lg">{error || 'Verification not found'}</p>
+            <button
+              onClick={() => router.back()}
+              className="mt-4 px-6 py-2 bg-blue-900 text-white rounded-full hover:bg-blue-800 transition"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -46,25 +146,25 @@ export default function VerificationDetailPage() {
             <div className="flex items-center gap-4">
               {/* Logo */}
               <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                {dummyData.business.logoUrl ? (
+                {verification.business.logo ? (
                   <img
-                    src={dummyData.business.logoUrl}
+                    src={verification.business.logo.url}
                     alt=""
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <span className="text-gray-400 text-sm font-semibold">
-                    GC
+                    {verification.business.name.substring(0, 2).toUpperCase()}
                   </span>
                 )}
               </div>
 
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {dummyData.business.name}
+                  {verification.business.name}
                 </h2>
                 <p className="text-sm text-gray-500">
-                  {dummyData.business.owner}
+                  {verification.business.owner.username || verification.business.owner.email}
                 </p>
               </div>
             </div>
@@ -92,37 +192,37 @@ export default function VerificationDetailPage() {
             <p className="text-gray-500">
               Business Name:{' '}
               <span className="text-gray-900 font-medium">
-                {dummyData.business.name}
+                {verification.business.name}
               </span>
             </p>
             <p className="text-gray-500">
               Email:{' '}
               <span className="text-gray-900 font-medium">
-                {dummyData.business.email}
+                {verification.business.owner.email || 'N/A'}
               </span>
             </p>
             <p className="text-gray-500">
               Owner:{' '}
               <span className="text-gray-900 font-medium">
-                {dummyData.business.owner}
+                {verification.business.owner.username || verification.business.owner.email || 'N/A'}
               </span>
             </p>
             <p className="text-gray-500">
               City:{' '}
               <span className="text-gray-900 font-medium">
-                {dummyData.business.city}
+                {verification.business.address.city}
               </span>
             </p>
             <p className="text-gray-500">
-              Business ID Number:{' '}
+              Business ID:{' '}
               <span className="text-gray-900 font-medium">
-                {dummyData.business.id}
+                {verification.business.id}
               </span>
             </p>
             <p className="text-gray-500">
               Category:{' '}
               <span className="text-gray-900 font-medium">
-                {dummyData.business.category}
+                {verification.business.category.title}
               </span>
             </p>
           </div>
@@ -140,38 +240,161 @@ export default function VerificationDetailPage() {
           </div>
 
           <div className="grid grid-cols-2 px-6 py-4 text-sm text-gray-900">
-            <span>{dummyData.verificationDocument.name}</span>
-            <span className="text-blue-600 hover:underline cursor-pointer">
-              {dummyData.verificationDocument.fileName}
-            </span>
+            <span>Verification File</span>
+            <button
+              onClick={() => setShowDocumentModal(true)}
+              className="text-blue-600 hover:underline cursor-pointer text-left"
+            >
+              {verification.verificationFile.originalName}
+            </button>
           </div>
         </div>
 
-        {/* Business Video */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
-            Business Video
-          </h3>
+        {/* Verification Status */}
+        {verification.status !== 'PENDING' && (
+          <div className="bg-white rounded-xl border border-gray-200 mb-8">
+            <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
+              Verification Status
+            </h3>
 
-          <div className="grid grid-cols-3 px-6 py-3 bg-gray-100 text-sm font-medium text-gray-600">
-            <span>Video</span>
-            <span>Uploaded video</span>
-            <span>Verification</span>
+            <div className="px-6 py-4 space-y-3">
+              {/* Status */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-500">Status</span>
+                <span
+                  className={`px-4 py-1 rounded-full text-sm font-medium ${
+                    verification.status === 'APPROVED'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {verification.status}
+                </span>
+              </div>
+
+              {/* Submitted At */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-500">Submitted At</span>
+                <span className="text-sm text-gray-900 font-medium">
+                  {new Date(verification.submittedAt).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+
+              {/* Reviewed At */}
+              {verification.reviewedAt && (
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-500">Reviewed At</span>
+                  <span className="text-sm text-gray-900 font-medium">
+                    {new Date(verification.reviewedAt).toLocaleString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+              )}
+
+              {/* Created At */}
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-500">Created At</span>
+                <span className="text-sm text-gray-900 font-medium">
+                  {new Date(verification.createdAt).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+
+              {/* Rejection Reason */}
+              {verification.status === 'REJECTED' && verification.rejectionReason && (
+                <div className="py-2">
+                  <span className="text-sm text-gray-500 block mb-2">Rejection Reason</span>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm text-red-900">{verification.rejectionReason}</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-3 px-6 py-4 text-sm items-center text-gray-900">
-            <span>{dummyData.businessVideo.name}</span>
+        {/* Business Files */}
+        {(() => {
+          // Filter out verification documents from business files
+          const businessFilesOnly = verification.business.files.filter(
+            (file) => file.type !== 'BUSINESS_VERIFICATION_DOCUMENT'
+          );
 
-            <span className="text-blue-600 hover:underline cursor-pointer flex items-center gap-2">
-              ▶ {dummyData.businessVideo.fileName}
-            </span>
+          return businessFilesOnly.length > 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200">
+              <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
+                Business Files
+              </h3>
 
-            <span className="text-blue-700 font-medium">
-              {dummyData.businessVideo.status}
-            </span>
-          </div>
-        </div>
+              <div className="grid grid-cols-3 px-6 py-3 bg-gray-100 text-sm font-medium text-gray-600">
+                <span>File Name</span>
+                <span>Type</span>
+                <span>Size</span>
+              </div>
+
+              {businessFilesOnly.map((file) => (
+                <div
+                  key={file.id}
+                  className="grid grid-cols-3 px-6 py-4 text-sm items-center text-gray-900 border-t border-gray-100"
+                >
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline cursor-pointer"
+                  >
+                    {file.originalName}
+                  </a>
+                  <span className="text-gray-600">{formatFileType(file.type)}</span>
+                  <span className="text-gray-600">
+                    {(file.sizeBytes / 1024).toFixed(2)} KB
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null;
+        })()}
       </div>
+
+      {/* Document Preview Modal */}
+      {showDocumentModal && (
+        <VerificationModal
+          verification={{
+            id: verification.id,
+            status: verification.status,
+            submittedAt: verification.submittedAt,
+            reviewedAt: verification.reviewedAt,
+            rejectionReason: verification.rejectionReason,
+            createdAt: verification.createdAt,
+            verificationFile: verification.verificationFile,
+            business: {
+              id: verification.business.id,
+              name: verification.business.name,
+              logo: verification.business.logo,
+              owner: verification.business.owner,
+            },
+          }}
+          onClose={() => setShowDocumentModal(false)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      )}
     </DashboardLayout>
   );
 }

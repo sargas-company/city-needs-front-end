@@ -15,7 +15,7 @@ export interface VerificationFile {
 }
 
 /**
- * Business entity nested in verification
+ * Business entity nested in verification (list view)
  */
 export interface VerificationBusiness {
   id: string;
@@ -32,7 +32,50 @@ export interface VerificationBusiness {
 }
 
 /**
- * Main verification entity
+ * Extended business entity for verification detail view
+ */
+export interface VerificationBusinessDetail {
+  id: string;
+  name: string;
+  logo: {
+    id: string;
+    url: string;
+    type: string;
+  } | null;
+  owner: {
+    email: string | null;
+    username: string | null;
+  };
+  category: {
+    id: string;
+    title: string;
+    slug: string;
+    description: string;
+    requiresVerification: boolean;
+    gracePeriodHours: number;
+  };
+  address: {
+    id: string;
+    countryCode: string;
+    city: string;
+    state: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    zip: string;
+  };
+  files: Array<{
+    id: string;
+    url: string;
+    type: string;
+    mimeType: string;
+    sizeBytes: number;
+    originalName: string;
+    createdAt: string;
+  }>;
+}
+
+/**
+ * Main verification entity (list view)
  */
 export interface Verification {
   id: string;
@@ -43,6 +86,20 @@ export interface Verification {
   createdAt: string;
   verificationFile: VerificationFile;
   business: VerificationBusiness;
+}
+
+/**
+ * Detailed verification entity (detail view)
+ */
+export interface VerificationDetail {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  verificationFile: VerificationFile;
+  business: VerificationBusinessDetail;
 }
 
 /**
@@ -78,6 +135,20 @@ export async function fetchVerifications(
   const response = await apiClient.get<FetchVerificationsResponse>(
     '/admin/verifications',
     { params }
+  );
+  return response.data;
+}
+
+/**
+ * Fetch a single verification by ID
+ * @param verificationId - The ID of the verification to fetch
+ * @returns Promise with detailed verification data
+ */
+export async function fetchVerificationById(
+  verificationId: string
+): Promise<VerificationDetail> {
+  const response = await apiClient.get<VerificationDetail>(
+    `/admin/verifications/${verificationId}`
   );
   return response.data;
 }

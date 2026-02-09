@@ -1,45 +1,86 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { User, Briefcase, UserPlus, Video } from "lucide-react";
+import { fetchStatisticsSummary, type StatisticsSummary } from "@/lib/api";
 
-// Dummy data
-const statsData = {
-  categories: [
-    { name: "Beauty", value: 320 },
-    { name: "Food", value: 410 },
-    { name: "Home Services", value: 190 },
-    { name: "Auto Services", value: 260 },
-    { name: "Pets", value: 260 },
-    { name: "Farm", value: 260 },
-  ],
-  summary: [
+export default function StatsPage() {
+  const [statistics, setStatistics] = useState<StatisticsSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadStatistics() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await fetchStatisticsSummary();
+        setStatistics(data);
+      } catch (err) {
+        console.error("Failed to fetch statistics:", err);
+        setError("Failed to load statistics");
+        toast.error("Failed to load statistics");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadStatistics();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !statistics) {
+    return (
+      <DashboardLayout>
+        <div className="p-8 max-w-6xl">
+          <div className="text-center py-12">
+            <p className="text-red-500 text-lg">
+              {error || "Statistics not found"}
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const maxCategoryValue = Math.max(
+    ...statistics.businessesByCategory.map((c) => c.count),
+    1 // Prevent division by zero
+  );
+
+  const summaryItems = [
     {
       label: "Users",
-      value: 1234,
+      value: statistics.totals.users,
       icon: User,
     },
     {
       label: "Businesses",
-      value: 2344,
+      value: statistics.totals.businesses,
       icon: Briefcase,
     },
     {
       label: "New Users",
-      value: 248,
+      value: statistics.totals.newUsers,
       icon: UserPlus,
     },
     {
       label: "Reels",
-      value: 1122,
+      value: statistics.totals.reels,
       icon: Video,
     },
-  ],
-};
-
-const maxCategoryValue = Math.max(...statsData.categories.map((c) => c.value));
-
-export default function StatsPage() {
+  ];
   return (
     <DashboardLayout>
       <div className="p-8 max-w-6xl">
@@ -57,31 +98,37 @@ export default function StatsPage() {
             </h2>
 
             <div className="space-y-5">
-              {statsData.categories.map((category) => (
-                <div key={category.name}>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-700">{category.name}</span>
-                    <span className="text-blue-900 font-medium">
-                      {category.value}
-                    </span>
-                  </div>
+              {statistics.businessesByCategory.length > 0 ? (
+                statistics.businessesByCategory.map((category) => (
+                  <div key={category.categoryId}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-700">{category.title}</span>
+                      <span className="text-blue-900 font-medium">
+                        {category.count}
+                      </span>
+                    </div>
 
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-orange-400 rounded-full"
-                      style={{
-                        width: `${(category.value / maxCategoryValue) * 100}%`,
-                      }}
-                    />
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-orange-400 rounded-full"
+                        style={{
+                          width: `${(category.count / maxCategoryValue) * 100}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-gray-500 text-center py-8">
+                  No category data available
+                </p>
+              )}
             </div>
           </div>
 
           {/* Right summary cards */}
           <div className="flex flex-col gap-6">
-            {statsData.summary.map((item) => {
+            {summaryItems.map((item) => {
               const Icon = item.icon;
 
               return (
