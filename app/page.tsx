@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import DashboardLayout from './components/DashboardLayout';
 import BusinessCard from './components/BusinessCard';
@@ -11,6 +11,7 @@ import {
   fetchCategories,
   fetchBusinesses as apiFetchBusinesses,
 } from '@/lib/api';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Business {
   id: string;
@@ -52,41 +53,38 @@ interface Category {
 
 export default function Home() {
   // State
-  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState<string | null>(null);
   const [updatingBusinessId, setUpdatingBusinessId] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Refs for latest values in intersection observer callback
-  const isLoadingRef = useRef(isLoadingBusinesses);
-  const hasMoreRef = useRef(hasMore);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  // Use infinite scroll hook
+  const {
+    items: businessesFromHook,
+    isLoading: isLoadingBusinesses,
+    hasMore,
+    lastElementRef,
+  } = useInfiniteScroll<Business>({
+    fetchFunction: apiFetchBusinesses,
+    filters: {
+      search: searchQuery,
+      categoryId: selectedCategory,
+      city: selectedCity,
+    },
+    limit: 10,
+  });
 
-  // Keep refs updated
+  // Local state for optimistic updates on status toggle
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+
+  // Sync businesses with hook's items
   useEffect(() => {
-    isLoadingRef.current = isLoadingBusinesses;
-    hasMoreRef.current = hasMore;
-  }, [isLoadingBusinesses, hasMore]);
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length >= 3 || searchQuery.length === 0) {
-        setDebouncedSearch(searchQuery);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    setBusinesses(businessesFromHook);
+  }, [businessesFromHook]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -103,93 +101,6 @@ export default function Home() {
 
     loadCategories();
   }, []);
-
-  // Fetch businesses
-  const fetchBusinesses = useCallback(
-    async (resetCursor = false) => {
-      setIsLoadingBusinesses(true);
-
-      try {
-        const data = await apiFetchBusinesses({
-          limit: 10,
-          cursor: !resetCursor && cursor ? cursor : undefined,
-          search: debouncedSearch || undefined,
-          categoryId: selectedCategory || undefined,
-          city: selectedCity || undefined,
-        });
-
-        const newBusinesses = data.items || [];
-        const nextCursor = data.meta?.nextCursor || null;
-
-        if (resetCursor) {
-          setBusinesses(newBusinesses);
-        } else {
-          setBusinesses((prev) => [...prev, ...newBusinesses]);
-        }
-
-        setCursor(nextCursor);
-        setHasMore(data.meta?.hasNextPage || false);
-      } catch (error) {
-        console.error('Failed to fetch businesses:', error);
-      } finally {
-        setIsLoadingBusinesses(false);
-      }
-    },
-    [cursor, debouncedSearch, selectedCategory, selectedCity]
-  );
-
-  // Callback ref for the last business element (infinity scroll)
-  const lastBusinessElementRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      console.log('📍 Callback ref called', {
-        node: !!node,
-        isLoading: isLoadingRef.current,
-        hasMore: hasMoreRef.current
-      });
-
-      // Disconnect previous observer if exists
-      if (observerRef.current) {
-        console.log('🧹 Disconnecting previous observer');
-        observerRef.current.disconnect();
-      }
-
-      if (!node || !hasMoreRef.current) {
-        console.log('⏸️ No node or no more items');
-        return;
-      }
-
-      console.log('✅ Setting up new observer for node');
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          console.log('👁️ Intersection callback', {
-            isIntersecting: entries[0].isIntersecting,
-            intersectionRatio: entries[0].intersectionRatio,
-            isLoading: isLoadingRef.current,
-            hasMore: hasMoreRef.current,
-          });
-
-          if (entries[0].isIntersecting && hasMoreRef.current && !isLoadingRef.current) {
-            console.log('🚀 Loading more businesses!');
-            fetchBusinesses(false);
-          }
-        },
-        { threshold: 0.1 }
-      );
-
-      observerRef.current.observe(node);
-      console.log('📌 Observer attached to node');
-    },
-    [fetchBusinesses]
-  );
-
-  // Reset and fetch when filters change
-  useEffect(() => {
-    setBusinesses([]);
-    setCursor(null);
-    setHasMore(true);
-    fetchBusinesses(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, selectedCategory, selectedCity]);
 
   const handleStatusToggle = async (businessId: string, currentStatus: string) => {
     // Prevent multiple simultaneous requests
@@ -267,7 +178,7 @@ export default function Home() {
                 onStatusToggle={handleStatusToggle}
                 isUpdating={isUpdating}
                 isDisabled={isDisabled}
-                ref={isLastBusiness ? lastBusinessElementRef : null}
+                ref={isLastBusiness ? lastElementRef : null}
               />
             );
           })}

@@ -1,38 +1,20 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { AxiosError } from 'axios';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import FilterBar from '@/app/components/FilterBar';
-import BusinessApprovalCard from '@/app/components/BusinessApprovalCard';
+import VerificationCard from '@/app/components/VerificationCard';
+import VerificationModal from '@/app/components/VerificationModal';
 import {
   fetchCategories,
-  fetchBusinessApprovals as apiFetchBusinessApprovals,
+  fetchVerifications as apiFetchVerifications,
+  approveVerification,
+  rejectVerification,
+  type Verification,
 } from '@/lib/api';
-
-interface Business {
-  id: string;
-  name: string;
-  owner?: {
-    id: string;
-    username: string | null;
-    email: string | null;
-  };
-  approvalStatus: string;
-  category?: {
-    id: string;
-    title: string;
-    slug: string;
-  };
-  logo?: {
-    id: string;
-    url: string;
-    type: string;
-    mimeType: string;
-    sizeBytes: number;
-    originalName: string;
-  } | null;
-  createdAt: string;
-}
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Category {
   id: string;
@@ -40,40 +22,40 @@ interface Category {
 }
 
 export default function BusinessApprovalPage() {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingBusinesses, setIsLoadingBusinesses] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState<string | null>(null);
+
+  // Modal state
+  const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Refs for latest values in intersection observer callback
-  const isLoadingRef = useRef(isLoadingBusinesses);
-  const hasMoreRef = useRef(hasMore);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  // Use infinite scroll hook
+  const {
+    items: verificationsFromHook,
+    isLoading: isLoadingVerifications,
+    hasMore,
+    lastElementRef,
+  } = useInfiniteScroll<Verification>({
+    fetchFunction: apiFetchVerifications,
+    filters: {
+      search: searchQuery,
+      categoryId: selectedCategory,
+      city: selectedCity,
+    },
+    limit: 10,
+  });
 
-  // Keep refs updated
+  // Local state for optimistic updates
+  const [verifications, setVerifications] = useState<Verification[]>([]);
+
+  // Sync verifications with hook's items
   useEffect(() => {
-    isLoadingRef.current = isLoadingBusinesses;
-    hasMoreRef.current = hasMore;
-  }, [isLoadingBusinesses, hasMore]);
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length >= 3 || searchQuery.length === 0) {
-        setDebouncedSearch(searchQuery);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    setVerifications(verificationsFromHook);
+  }, [verificationsFromHook]);
 
   // Fetch categories
   useEffect(() => {
@@ -91,76 +73,60 @@ export default function BusinessApprovalPage() {
     loadCategories();
   }, []);
 
-  // Fetch businesses for approval
-  const fetchBusinesses = useCallback(
-    async (reset: boolean = false) => {
-      if (isLoadingRef.current || (!reset && !hasMoreRef.current)) {
-        return;
-      }
+  const handleViewDocument = (verification: Verification) => {
+    setSelectedVerification(verification);
+  };
 
-      setIsLoadingBusinesses(true);
+  const handleCloseModal = () => {
+    setSelectedVerification(null);
+  };
 
-      try {
-        const data = await apiFetchBusinessApprovals({
-          limit: 10,
-          cursor: !reset && cursor ? cursor : undefined,
-          search: debouncedSearch || undefined,
-          categoryId: selectedCategory || undefined,
-          city: selectedCity || undefined,
-        });
+  const handleApprove = async (verificationId: string) => {
+    try {
+      const response = await approveVerification(verificationId);
 
-        if (data.items && Array.isArray(data.items)) {
-          setBusinesses((prev) => (reset ? data.items : [...prev, ...data.items]));
-          setCursor(data.meta?.nextCursor || null);
-          setHasMore(data.meta?.hasNextPage || false);
-        }
-      } catch (error) {
-        console.error('Failed to fetch businesses:', error);
-      } finally {
-        setIsLoadingBusinesses(false);
-      }
-    },
-    [cursor, debouncedSearch, selectedCategory, selectedCity]
-  );
-
-  // Callback ref for the last business element (infinity scroll)
-  const lastBusinessElementRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      // Disconnect previous observer if exists
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-
-      if (!node || !hasMoreRef.current) {
-        return;
-      }
-
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting && hasMoreRef.current && !isLoadingRef.current) {
-            fetchBusinesses(false);
-          }
-        },
-        { threshold: 0.1 }
+      // Update local state with new verification status
+      setVerifications((prev) =>
+        prev.map((verification) =>
+          verification.id === verificationId
+            ? { ...verification, status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED' }
+            : verification
+        )
       );
 
-      observerRef.current.observe(node);
-    },
-    [fetchBusinesses]
-  );
+      toast.success('Business verification approved successfully');
+      handleCloseModal();
+    } catch (error) {
+      console.error('Failed to approve verification:', error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errorMessage = axiosError.response?.data?.message || 'Failed to approve verification';
+      toast.error(errorMessage);
+      handleCloseModal();
+    }
+  };
 
-  // Reset and fetch when filters change
-  useEffect(() => {
-    setBusinesses([]);
-    setCursor(null);
-    setHasMore(true);
-    fetchBusinesses(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, selectedCategory, selectedCity]);
+  const handleReject = async (verificationId: string, reason: string) => {
+    try {
+      const response = await rejectVerification(verificationId, reason);
 
-  const handleViewDocuments = (businessId: string) => {
-    console.log('View documents for business:', businessId);
-    // TODO: Implement document viewing logic
+      // Update local state with new verification status
+      setVerifications((prev) =>
+        prev.map((verification) =>
+          verification.id === verificationId
+            ? { ...verification, status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED' }
+            : verification
+        )
+      );
+
+      toast.success('Business verification rejected successfully');
+      handleCloseModal();
+    } catch (error) {
+      console.error('Failed to reject verification:', error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errorMessage = axiosError.response?.data?.message || 'Failed to reject verification';
+      toast.error(errorMessage);
+      handleCloseModal();
+    }
   };
 
   return (
@@ -186,22 +152,22 @@ export default function BusinessApprovalPage() {
           onCityChange={setSelectedCity}
         />
 
-        {/* Business Grid */}
-        {businesses.length === 0 && !isLoadingBusinesses ? (
+        {/* Verifications Grid */}
+        {verifications.length === 0 && !isLoadingVerifications ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No businesses found</p>
+            <p className="text-gray-500 text-lg">No verifications found</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {businesses.map((business, index) => {
-              const isLastBusiness = index === businesses.length - 1;
+            {verifications.map((verification, index) => {
+              const isLast = index === verifications.length - 1;
 
               return (
-                <BusinessApprovalCard
-                  key={business.id}
-                  business={business}
-                  onViewDocuments={handleViewDocuments}
-                  ref={isLastBusiness ? lastBusinessElementRef : null}
+                <VerificationCard
+                  key={verification.id}
+                  verification={verification}
+                  onViewDocument={handleViewDocument}
+                  ref={isLast ? lastElementRef : null}
                 />
               );
             })}
@@ -209,12 +175,22 @@ export default function BusinessApprovalPage() {
         )}
 
         {/* Loading indicator */}
-        {isLoadingBusinesses && (
+        {isLoadingVerifications && (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
           </div>
         )}
       </div>
+
+      {/* Verification Modal */}
+      {selectedVerification && (
+        <VerificationModal
+          verification={selectedVerification}
+          onClose={handleCloseModal}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      )}
     </DashboardLayout>
   );
 }
