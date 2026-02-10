@@ -12,6 +12,7 @@ import {
   fetchVerifications as apiFetchVerifications,
   approveVerification,
   rejectVerification,
+  requestVerificationResubmission,
   type Verification,
 } from '@/lib/api';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
@@ -129,6 +130,30 @@ export default function BusinessApprovalPage() {
     }
   };
 
+  const handleRequestResubmission = async (verificationId: string, reason: string) => {
+    try {
+      const response = await requestVerificationResubmission(verificationId, reason);
+
+      // Update local state with new verification status
+      setVerifications((prev) =>
+        prev.map((verification) =>
+          verification.id === verificationId
+            ? { ...verification, status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED' }
+            : verification
+        )
+      );
+
+      toast.success('Re-submission request sent successfully');
+      handleCloseModal();
+    } catch (error) {
+      console.error('Failed to request resubmission:', error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errorMessage = axiosError.response?.data?.message || 'Failed to request resubmission';
+      toast.error(errorMessage);
+      handleCloseModal();
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -189,6 +214,7 @@ export default function BusinessApprovalPage() {
           onClose={handleCloseModal}
           onApprove={handleApprove}
           onReject={handleReject}
+          onRequestResubmission={handleRequestResubmission}
         />
       )}
     </DashboardLayout>

@@ -226,3 +226,30 @@ export async function rejectVerification(
   );
   return response.data;
 }
+
+/**
+ * Request resubmission response
+ */
+export interface RequestResubmissionResponse {
+  verificationId: string;
+  verificationStatus: string;
+  businessId: string;
+  businessStatus: string;
+}
+
+/**
+ * Request resubmission for a business verification
+ * @param verificationId - The ID of the verification to request resubmission for
+ * @param resubmissionReason - The reason for requesting resubmission (required, max 500 chars)
+ * @returns Promise with verification and business status
+ */
+export async function requestVerificationResubmission(
+  verificationId: string,
+  resubmissionReason: string
+): Promise<RequestResubmissionResponse> {
+  const response = await apiClient.post<RequestResubmissionResponse>(
+    `/admin/verifications/${verificationId}/resubmission`,
+    { resubmissionReason }
+  );
+  return response.data;
+}

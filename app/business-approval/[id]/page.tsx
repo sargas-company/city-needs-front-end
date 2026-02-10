@@ -10,6 +10,7 @@ import {
   fetchVerificationById,
   approveVerification,
   rejectVerification,
+  requestVerificationResubmission,
   type VerificationDetail,
 } from '@/lib/api';
 
@@ -90,6 +91,31 @@ export default function VerificationDetailPage() {
       console.error('Failed to reject verification:', error);
       const axiosError = error as AxiosError<{ message: string }>;
       const errorMessage = axiosError.response?.data?.message || 'Failed to reject verification';
+      toast.error(errorMessage);
+      setShowDocumentModal(false);
+    }
+  };
+
+  const handleRequestResubmission = async (verificationId: string, reason: string) => {
+    try {
+      const response = await requestVerificationResubmission(verificationId, reason);
+
+      // Update local state with new verification status
+      setVerification((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED',
+            }
+          : prev
+      );
+
+      toast.success('Re-submission request sent successfully');
+      setShowDocumentModal(false);
+    } catch (error) {
+      console.error('Failed to request resubmission:', error);
+      const axiosError = error as AxiosError<{ message: string }>;
+      const errorMessage = axiosError.response?.data?.message || 'Failed to request resubmission';
       toast.error(errorMessage);
       setShowDocumentModal(false);
     }
@@ -393,6 +419,7 @@ export default function VerificationDetailPage() {
           onClose={() => setShowDocumentModal(false)}
           onApprove={handleApprove}
           onReject={handleReject}
+          onRequestResubmission={handleRequestResubmission}
         />
       )}
     </DashboardLayout>
