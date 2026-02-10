@@ -39,3 +39,30 @@ export async function fetchUserData(): Promise<User | null> {
     return null;
   }
 }
+
+interface ResetPasswordResponse {
+  success: boolean;
+  data: null;
+  message: string;
+}
+
+/**
+ * Request password reset link to be sent to the provided email
+ * @param email - User's email address
+ * @returns Response with success status and message
+ */
+export async function requestPasswordReset(email: string): Promise<ResetPasswordResponse> {
+  try {
+    const response = await apiClient.post<ResetPasswordResponse>('/auth/reset-password-request', {
+      email,
+    });
+
+    return response.data;
+  } catch (error: any) {
+    // Handle API errors
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    throw new Error('Failed to send password reset link');
+  }
+}

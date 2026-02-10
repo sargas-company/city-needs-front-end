@@ -5,19 +5,23 @@ import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { setToken, isAdmin } from '@/lib/auth';
-import { fetchUserData } from '@/lib/api';
+import { fetchUserData, requestPasswordReset } from '@/lib/api';
+import ResetPasswordModal from '@/app/components/ResetPasswordModal';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setResetSuccess(false);
 
     try {
       // Sign in with Firebase
@@ -62,6 +66,20 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (resetEmail: string) => {
+    try {
+      const response = await requestPasswordReset(resetEmail);
+      setShowResetModal(false);
+      setResetSuccess(true);
+      setError('');
+
+      // Hide success message after 5 seconds
+      setTimeout(() => setResetSuccess(false), 5000);
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
@@ -84,6 +102,13 @@ export default function LoginPage() {
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
             {error}
+          </div>
+        )}
+
+        {/* Success Message */}
+        {resetSuccess && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm">
+            If this email exists, a password reset link has been sent
           </div>
         )}
 
@@ -139,14 +164,23 @@ export default function LoginPage() {
 
         {/* Forgot Password */}
         <div className="mt-6 text-center">
-          <a
-            href="#"
+          <button
+            type="button"
+            onClick={() => setShowResetModal(true)}
             className="text-slate-700 hover:text-slate-900 font-medium text-sm transition-colors"
           >
             Forgot Password?
-          </a>
+          </button>
         </div>
       </div>
+
+      {/* Reset Password Modal */}
+      {showResetModal && (
+        <ResetPasswordModal
+          onClose={() => setShowResetModal(false)}
+          onSubmit={handleResetPassword}
+        />
+      )}
     </div>
   );
 }
