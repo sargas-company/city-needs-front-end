@@ -2,6 +2,7 @@
 
 import apiClient from '../axios';
 import { AxiosError } from 'axios';
+import type { VerificationFile } from './verifications.api';
 
 // Types
 export interface BusinessStatusResponse {
@@ -83,16 +84,6 @@ export interface FetchBusinessApprovalsResponse {
     nextCursor: string | null;
     hasNextPage: boolean;
   };
-}
-
-/**
- * Verification file attached to business verification submission
- */
-export interface VerificationFile {
-  id: string;
-  url: string;
-  mimeType: string;
-  originalName: string;
 }
 
 /**
