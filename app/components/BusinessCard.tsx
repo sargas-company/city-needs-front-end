@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 interface BusinessCardProps {
@@ -42,12 +43,23 @@ interface BusinessCardProps {
 
 const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
   ({ business, onStatusToggle, isUpdating = false, isDisabled = false }, ref) => {
+    const router = useRouter();
     const isActive = ['ACTIVE', 'PENDING', 'REJECTED'].includes(business.status);
+
+    const handleCardClick = () => {
+      router.push(`/business-approval/${business.id}`);
+    };
+
+    const handleStatusToggle = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onStatusToggle?.(business.id, business.status);
+    };
 
     return (
       <div
         ref={ref}
-        className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+        onClick={handleCardClick}
+        className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
       >
         {/* Business Header */}
         <div className="flex items-center gap-4 mb-4">
@@ -97,7 +109,7 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
 
         {/* Status Button */}
         <button
-          onClick={() => onStatusToggle?.(business.id, business.status)}
+          onClick={handleStatusToggle}
           disabled={isDisabled}
           className={`w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
             isActive

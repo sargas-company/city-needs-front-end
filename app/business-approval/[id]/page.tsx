@@ -7,57 +7,51 @@ import { AxiosError } from 'axios';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import VerificationModal from '@/app/components/VerificationModal';
 import {
-  fetchVerificationById,
+  fetchBusinessById,
   approveVerification,
   rejectVerification,
   requestVerificationResubmission,
-  type VerificationDetail,
+  type BusinessDetail,
 } from '@/lib/api';
 
 export default function VerificationDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const verificationId = params.id as string;
+  const businessId = params.id as string;
 
-  const [verification, setVerification] = useState<VerificationDetail | null>(null);
+  const [business, setBusiness] = useState<BusinessDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
 
   useEffect(() => {
-    async function loadVerification() {
+    async function loadBusiness() {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await fetchVerificationById(verificationId);
-        setVerification(data);
+        const data = await fetchBusinessById(businessId);
+        setBusiness(data);
       } catch (err) {
-        console.error('Failed to fetch verification:', err);
-        setError('Failed to load verification details');
-        toast.error('Failed to load verification details');
+        console.error('Failed to fetch business:', err);
+        setError('Failed to load business details');
+        toast.error('Failed to load business details');
       } finally {
         setIsLoading(false);
       }
     }
 
-    if (verificationId) {
-      loadVerification();
+    if (businessId) {
+      loadBusiness();
     }
-  }, [verificationId]);
+  }, [businessId]);
 
   const handleApprove = async (verificationId: string) => {
     try {
-      const response = await approveVerification(verificationId);
+      await approveVerification(verificationId);
 
-      // Update local state with new verification status
-      setVerification((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED',
-            }
-          : prev
-      );
+      // Reload business data to get updated verification status
+      const updatedBusiness = await fetchBusinessById(businessId);
+      setBusiness(updatedBusiness);
 
       toast.success('Business verification approved successfully');
       setShowDocumentModal(false);
@@ -72,18 +66,11 @@ export default function VerificationDetailPage() {
 
   const handleReject = async (verificationId: string, reason: string) => {
     try {
-      const response = await rejectVerification(verificationId, reason);
+      await rejectVerification(verificationId, reason);
 
-      // Update local state with new verification status
-      setVerification((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED',
-              rejectionReason: reason,
-            }
-          : prev
-      );
+      // Reload business data to get updated verification status
+      const updatedBusiness = await fetchBusinessById(businessId);
+      setBusiness(updatedBusiness);
 
       toast.success('Business verification rejected successfully');
       setShowDocumentModal(false);
@@ -98,17 +85,11 @@ export default function VerificationDetailPage() {
 
   const handleRequestResubmission = async (verificationId: string, reason: string) => {
     try {
-      const response = await requestVerificationResubmission(verificationId, reason);
+      await requestVerificationResubmission(verificationId, reason);
 
-      // Update local state with new verification status
-      setVerification((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: response.verificationStatus as 'APPROVED' | 'PENDING' | 'REJECTED',
-            }
-          : prev
-      );
+      // Reload business data to get updated verification status
+      const updatedBusiness = await fetchBusinessById(businessId);
+      setBusiness(updatedBusiness);
 
       toast.success('Re-submission request sent successfully');
       setShowDocumentModal(false);
@@ -135,12 +116,12 @@ export default function VerificationDetailPage() {
     );
   }
 
-  if (error || !verification) {
+  if (error || !business) {
     return (
       <DashboardLayout>
         <div className="p-8 max-w-6xl">
           <div className="text-center py-12">
-            <p className="text-red-500 text-lg">{error || 'Verification not found'}</p>
+            <p className="text-red-500 text-lg">{error || 'Business not found'}</p>
             <button
               onClick={() => router.back()}
               className="mt-4 px-6 py-2 bg-blue-900 text-white rounded-full hover:bg-blue-800 transition"
@@ -152,6 +133,11 @@ export default function VerificationDetailPage() {
       </DashboardLayout>
     );
   }
+
+  // Get the latest verification (most recent one)
+  const latestVerification = business.verifications.length > 0
+    ? business.verifications[business.verifications.length - 1]
+    : null;
 
   return (
     <DashboardLayout>
@@ -172,25 +158,25 @@ export default function VerificationDetailPage() {
             <div className="flex items-center gap-4">
               {/* Logo */}
               <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                {verification.business.logo ? (
+                {business.logo ? (
                   <img
-                    src={verification.business.logo.url}
+                    src={business.logo.url}
                     alt=""
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <span className="text-gray-400 text-sm font-semibold">
-                    {verification.business.name.substring(0, 2).toUpperCase()}
+                    {business.name.substring(0, 2).toUpperCase()}
                   </span>
                 )}
               </div>
 
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {verification.business.name}
+                  {business.name}
                 </h2>
                 <p className="text-sm text-gray-500">
-                  {verification.business.owner.username || verification.business.owner.email}
+                  {business.owner.username || business.owner.email}
                 </p>
               </div>
             </div>
@@ -218,66 +204,68 @@ export default function VerificationDetailPage() {
             <p className="text-gray-500">
               Business Name:{' '}
               <span className="text-gray-900 font-medium">
-                {verification.business.name}
+                {business.name}
               </span>
             </p>
             <p className="text-gray-500">
               Email:{' '}
               <span className="text-gray-900 font-medium">
-                {verification.business.owner.email || 'N/A'}
+                {business.owner.email || 'N/A'}
               </span>
             </p>
             <p className="text-gray-500">
               Owner:{' '}
               <span className="text-gray-900 font-medium">
-                {verification.business.owner.username || verification.business.owner.email || 'N/A'}
+                {business.owner.username || business.owner.email || 'N/A'}
               </span>
             </p>
             <p className="text-gray-500">
               City:{' '}
               <span className="text-gray-900 font-medium">
-                {verification.business.address.city}
+                {business.address.city}
               </span>
             </p>
             <p className="text-gray-500">
               Business ID:{' '}
               <span className="text-gray-900 font-medium">
-                {verification.business.id}
+                {business.id}
               </span>
             </p>
             <p className="text-gray-500">
               Category:{' '}
               <span className="text-gray-900 font-medium">
-                {verification.business.category.title}
+                {business.category.title}
               </span>
             </p>
           </div>
         </div>
 
         {/* Verification Document */}
-        <div className="bg-white rounded-xl border border-gray-200 mb-8">
-          <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
-            Verification Document
-          </h3>
+        {latestVerification && (
+          <div className="bg-white rounded-xl border border-gray-200 mb-8">
+            <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
+              Verification Document
+            </h3>
 
-          <div className="grid grid-cols-2 px-6 py-3 bg-gray-100 text-sm font-medium text-gray-600">
-            <span>Document</span>
-            <span>Uploaded file</span>
-          </div>
+            <div className="grid grid-cols-2 px-6 py-3 bg-gray-100 text-sm font-medium text-gray-600">
+              <span>Document</span>
+              <span>Uploaded file</span>
+            </div>
 
-          <div className="grid grid-cols-2 px-6 py-4 text-sm text-gray-900">
-            <span>Verification File</span>
-            <button
-              onClick={() => setShowDocumentModal(true)}
-              className="text-blue-600 hover:underline cursor-pointer text-left"
-            >
-              {verification.verificationFile.originalName}
-            </button>
+            <div className="grid grid-cols-2 px-6 py-4 text-sm text-gray-900">
+              <span>Verification File</span>
+              <button
+                onClick={() => setShowDocumentModal(true)}
+                className="text-blue-600 hover:underline cursor-pointer text-left"
+              >
+                {latestVerification.verificationFile.originalName}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Verification Status */}
-        {verification.status !== 'PENDING' && (
+        {latestVerification && latestVerification.status !== 'PENDING' && (
           <div className="bg-white rounded-xl border border-gray-200 mb-8">
             <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
               Verification Status
@@ -289,12 +277,12 @@ export default function VerificationDetailPage() {
                 <span className="text-sm text-gray-500">Status</span>
                 <span
                   className={`px-4 py-1 rounded-full text-sm font-medium ${
-                    verification.status === 'APPROVED'
+                    latestVerification.status === 'APPROVED'
                       ? 'bg-green-100 text-green-700'
                       : 'bg-red-100 text-red-700'
                   }`}
                 >
-                  {verification.status}
+                  {latestVerification.status}
                 </span>
               </div>
 
@@ -302,7 +290,7 @@ export default function VerificationDetailPage() {
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-500">Submitted At</span>
                 <span className="text-sm text-gray-900 font-medium">
-                  {new Date(verification.submittedAt).toLocaleString('en-US', {
+                  {new Date(latestVerification.submittedAt).toLocaleString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -313,11 +301,11 @@ export default function VerificationDetailPage() {
               </div>
 
               {/* Reviewed At */}
-              {verification.reviewedAt && (
+              {latestVerification.reviewedAt && (
                 <div className="flex items-center justify-between py-2 border-b border-gray-100">
                   <span className="text-sm text-gray-500">Reviewed At</span>
                   <span className="text-sm text-gray-900 font-medium">
-                    {new Date(verification.reviewedAt).toLocaleString('en-US', {
+                    {new Date(latestVerification.reviewedAt).toLocaleString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -332,7 +320,7 @@ export default function VerificationDetailPage() {
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-500">Created At</span>
                 <span className="text-sm text-gray-900 font-medium">
-                  {new Date(verification.createdAt).toLocaleString('en-US', {
+                  {new Date(latestVerification.createdAt).toLocaleString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -343,11 +331,11 @@ export default function VerificationDetailPage() {
               </div>
 
               {/* Rejection Reason */}
-              {verification.status === 'REJECTED' && verification.rejectionReason && (
+              {latestVerification.status === 'REJECTED' && latestVerification.rejectionReason && (
                 <div className="py-2">
                   <span className="text-sm text-gray-500 block mb-2">Rejection Reason</span>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-sm text-red-900">{verification.rejectionReason}</p>
+                    <p className="text-sm text-red-900">{latestVerification.rejectionReason}</p>
                   </div>
                 </div>
               )}
@@ -358,7 +346,7 @@ export default function VerificationDetailPage() {
         {/* Business Files */}
         {(() => {
           // Filter out verification documents from business files
-          const businessFilesOnly = verification.business.files.filter(
+          const businessFilesOnly = business.files.filter(
             (file) => file.type !== 'BUSINESS_VERIFICATION_DOCUMENT'
           );
 
@@ -383,7 +371,8 @@ export default function VerificationDetailPage() {
                     href={file.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline cursor-pointer"
+                    className="text-blue-600 hover:underline cursor-pointer truncate"
+                    title={file.originalName}
                   >
                     {file.originalName}
                   </a>
@@ -399,21 +388,21 @@ export default function VerificationDetailPage() {
       </div>
 
       {/* Document Preview Modal */}
-      {showDocumentModal && (
+      {showDocumentModal && latestVerification && (
         <VerificationModal
           verification={{
-            id: verification.id,
-            status: verification.status,
-            submittedAt: verification.submittedAt,
-            reviewedAt: verification.reviewedAt,
-            rejectionReason: verification.rejectionReason,
-            createdAt: verification.createdAt,
-            verificationFile: verification.verificationFile,
+            id: latestVerification.id,
+            status: latestVerification.status,
+            submittedAt: latestVerification.submittedAt,
+            reviewedAt: latestVerification.reviewedAt,
+            rejectionReason: latestVerification.rejectionReason,
+            createdAt: latestVerification.createdAt,
+            verificationFile: latestVerification.verificationFile,
             business: {
-              id: verification.business.id,
-              name: verification.business.name,
-              logo: verification.business.logo,
-              owner: verification.business.owner,
+              id: business.id,
+              name: business.name,
+              logo: business.logo,
+              owner: business.owner,
             },
           }}
           onClose={() => setShowDocumentModal(false)}

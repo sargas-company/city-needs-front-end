@@ -13,7 +13,8 @@ const VerificationCard = forwardRef<HTMLDivElement, VerificationCardProps>(
     const router = useRouter();
 
     const handleCardClick = () => {
-      router.push(`/business-approval/${verification.id}`);
+      // Navigate using business ID instead of verification ID
+      router.push(`/business-approval/${verification.business.id}`);
     };
 
     const handleViewDocumentClick = (e: React.MouseEvent) => {

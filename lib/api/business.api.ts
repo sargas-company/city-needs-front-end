@@ -86,6 +86,84 @@ export interface FetchBusinessApprovalsResponse {
 }
 
 /**
+ * Verification file attached to business verification submission
+ */
+export interface VerificationFile {
+  id: string;
+  url: string;
+  mimeType: string;
+  originalName: string;
+}
+
+/**
+ * Business file (logo, documents, etc.)
+ */
+export interface BusinessFile {
+  id: string;
+  url: string;
+  type: string;
+  mimeType: string;
+  sizeBytes: number;
+  originalName: string;
+  createdAt: string;
+}
+
+/**
+ * Verification entity within business detail
+ */
+export interface BusinessVerification {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  resubmissionReason: string | null;
+  createdAt: string;
+  reviewedByAdminId: string | null;
+  verificationFile: VerificationFile;
+}
+
+/**
+ * Detailed business entity with all nested data
+ */
+export interface BusinessDetail {
+  id: string;
+  name: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+  updatedAt: string;
+  logo: {
+    id: string;
+    url: string;
+    type: string;
+  } | null;
+  owner: {
+    id: string;
+    email: string | null;
+    username: string | null;
+  };
+  category: {
+    id: string;
+    title: string;
+    slug: string;
+    description: string;
+    requiresVerification: boolean;
+    gracePeriodHours: number;
+  };
+  address: {
+    id: string;
+    countryCode: string;
+    city: string;
+    state: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    zip: string;
+  };
+  files: BusinessFile[];
+  verifications: BusinessVerification[];
+}
+
+/**
  * Activate a business
  * @param businessId - The ID of the business to activate
  * @returns Promise with the business status response
@@ -162,6 +240,20 @@ export async function fetchBusinessApprovals(
   const response = await apiClient.get<FetchBusinessApprovalsResponse>(
     '/admin/business-approvals',
     { params }
+  );
+  return response.data;
+}
+
+/**
+ * Fetch a single business by ID with all details including verifications
+ * @param businessId - The ID of the business to fetch
+ * @returns Promise with detailed business data
+ */
+export async function fetchBusinessById(
+  businessId: string
+): Promise<BusinessDetail> {
+  const response = await apiClient.get<BusinessDetail>(
+    `/admin/businesses/${businessId}`
   );
   return response.data;
 }
