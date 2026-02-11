@@ -1,5 +1,4 @@
 import { forwardRef } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
@@ -63,14 +62,12 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
       >
         {/* Business Header */}
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden relative">
+          <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
             {business.logo?.url ? (
-              <Image
+              <img
                 src={business.logo.url}
                 alt={business.name}
-                fill
-                className="object-cover"
-                sizes="56px"
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">

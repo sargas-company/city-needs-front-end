@@ -1,5 +1,4 @@
 import { forwardRef } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { Verification } from '@/lib/api';
 
@@ -57,14 +56,12 @@ const VerificationCard = forwardRef<HTMLDivElement, VerificationCardProps>(
       >
         {/* Business Header - Logo + Name in horizontal layout */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden relative flex-shrink-0">
+          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
             {verification.business.logo?.url ? (
-              <Image
+              <img
                 src={verification.business.logo.url}
                 alt={verification.business.name}
-                fill
-                className="object-cover"
-                sizes="64px"
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
