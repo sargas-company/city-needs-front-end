@@ -102,6 +102,32 @@ export default function VerificationModal({
       );
     }
 
+    // HEIC/HEIF formats are not supported by browsers
+    if (
+      mimeType === "image/heic" ||
+      mimeType === "image/heif" ||
+      mimeType === "image/heic-sequence" ||
+      mimeType === "image/heif-sequence"
+    ) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <p className="font-medium text-gray-700">HEIC/HEIF Image</p>
+          <p className="text-sm text-gray-500">
+            This format is not supported in browser preview
+          </p>
+          <a
+            href={fileUrl}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800"
+          >
+            Download Image
+          </a>
+        </div>
+      );
+    }
+
     if (mimeType.startsWith("image/")) {
       return (
         <div className="flex justify-center">
