@@ -6,11 +6,16 @@ import toast from 'react-hot-toast';
 import { AxiosError } from 'axios';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import VerificationModal from '@/app/components/VerificationModal';
+import BusinessVideoReviewModal from '@/app/components/BusinessVideoReviewModal';
+import { Play, Ban } from 'lucide-react';
 import {
   fetchBusinessById,
   approveVerification,
   rejectVerification,
   requestVerificationResubmission,
+  approveBusinessVideo,
+  rejectBusinessVideo,
+  requestBusinessVideoResubmission,
   type BusinessDetail,
 } from '@/lib/api';
 
@@ -23,6 +28,7 @@ export default function VerificationDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [showVideoReviewModal, setShowVideoReviewModal] = useState(false);
 
   useEffect(() => {
     async function loadBusiness() {
@@ -99,6 +105,48 @@ export default function VerificationDetailPage() {
       const errorMessage = axiosError.response?.data?.message || 'Failed to request resubmission';
       toast.error(errorMessage);
       setShowDocumentModal(false);
+    }
+  };
+
+  const handleVideoApprove = async () => {
+    if (!business?.video) return;
+    try {
+      await approveBusinessVideo(business.video.id);
+      const updatedBusiness = await fetchBusinessById(businessId);
+      setBusiness(updatedBusiness);
+      toast.success('Business video approved successfully');
+      setShowVideoReviewModal(false);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      toast.error(axiosError.response?.data?.message || 'Failed to approve video');
+    }
+  };
+
+  const handleVideoReject = async (reason: string) => {
+    if (!business?.video) return;
+    try {
+      await rejectBusinessVideo(business.video.id, reason);
+      const updatedBusiness = await fetchBusinessById(businessId);
+      setBusiness(updatedBusiness);
+      toast.success('Business video rejected successfully');
+      setShowVideoReviewModal(false);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      toast.error(axiosError.response?.data?.message || 'Failed to reject video');
+    }
+  };
+
+  const handleVideoResubmission = async (reason: string) => {
+    if (!business?.video) return;
+    try {
+      await requestBusinessVideoResubmission(business.video.id, reason);
+      const updatedBusiness = await fetchBusinessById(businessId);
+      setBusiness(updatedBusiness);
+      toast.success('Video re-submission request sent successfully');
+      setShowVideoReviewModal(false);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      toast.error(axiosError.response?.data?.message || 'Failed to request video resubmission');
     }
   };
 
@@ -347,7 +395,7 @@ export default function VerificationDetailPage() {
         {(() => {
           // Filter out verification documents from business files
           const businessFilesOnly = business.files.filter(
-            (file) => file.type !== 'BUSINESS_VERIFICATION_DOCUMENT'
+            (file) => file.type !== 'BUSINESS_VERIFICATION_DOCUMENT' && file.type !== 'BUSINESS_VIDEO'
           );
 
           return businessFilesOnly.length > 0 ? (
@@ -385,6 +433,62 @@ export default function VerificationDetailPage() {
             </div>
           ) : null;
         })()}
+
+        {/* Business Video */}
+        {business.video && (
+          <div className="bg-white rounded-xl border border-gray-200 mt-8">
+            <h3 className="px-6 py-4 text-lg font-semibold text-gray-900">
+              Business Video
+            </h3>
+
+            <div className="grid grid-cols-3 px-6 py-3 bg-gray-100 text-sm font-medium text-gray-600">
+              <span>Video</span>
+              <span>Uploaded video</span>
+              <span className="text-right">Verification</span>
+            </div>
+
+            <div className="grid grid-cols-3 px-6 py-4 text-sm items-center text-gray-900 border-t border-gray-100">
+              <span>Business Video</span>
+              <div>
+                {business.video.processingStatus === 'READY' ? (
+                  <a
+                    href={business.video.processedUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                  >
+                    <Play className="w-4 h-4" />
+                    <span className="truncate max-w-[200px]">
+                      {business.name}
+                    </span>
+                  </a>
+                ) : (
+                  <span className="text-gray-600">{business.video.processingStatus}</span>
+                )}
+              </div>
+              <div className="flex justify-end">
+                {business.video.processingStatus === 'READY' ? (
+                  <button
+                    onClick={() => {
+                      if (business.video?.status === 'PENDING') {
+                        setShowVideoReviewModal(true);
+                      }
+                    }}
+                    className={`text-sm text-gray-700 ${
+                      business.video.status === 'PENDING'
+                        ? 'cursor-pointer hover:text-gray-900'
+                        : 'cursor-default'
+                    }`}
+                  >
+                    {business.video.status.charAt(0) + business.video.status.slice(1).toLowerCase()}
+                  </button>
+                ) : (
+                  <Ban className="w-5 h-5 text-red-500" />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Document Preview Modal */}
@@ -409,6 +513,16 @@ export default function VerificationDetailPage() {
           onApprove={handleApprove}
           onReject={handleReject}
           onRequestResubmission={handleRequestResubmission}
+        />
+      )}
+
+      {/* Business Video Review Modal */}
+      {showVideoReviewModal && business.video && (
+        <BusinessVideoReviewModal
+          onClose={() => setShowVideoReviewModal(false)}
+          onApprove={handleVideoApprove}
+          onReject={handleVideoReject}
+          onRequestResubmission={handleVideoResubmission}
         />
       )}
     </DashboardLayout>

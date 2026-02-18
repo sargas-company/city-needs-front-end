@@ -25,6 +25,17 @@ export interface Category {
   slug?: string;
 }
 
+export interface BusinessVideo {
+  id: string;
+  processingStatus: 'UPLOADED' | 'PROCESSING' | 'READY' | 'FAILED';
+  processedUrl: string | null;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  width: number | null;
+  height: number | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'RESUBMISSION';
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -55,6 +66,7 @@ export interface Business {
     sizeBytes: number;
     originalName: string;
   } | null;
+  video?: BusinessVideo | null;
   createdAt: string;
 }
 
@@ -152,6 +164,7 @@ export interface BusinessDetail {
   };
   files: BusinessFile[];
   verifications: BusinessVerification[];
+  video?: BusinessVideo | null;
 }
 
 /**
@@ -247,4 +260,41 @@ export async function fetchBusinessById(
     `/admin/businesses/${businessId}`
   );
   return response.data;
+}
+
+export interface BusinessVideoModerationResponse {
+  videoId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'RESUBMISSION';
+  businessId: string;
+}
+
+export async function approveBusinessVideo(
+  videoId: string
+): Promise<BusinessVideoModerationResponse> {
+  const response = await apiClient.post<{ data: BusinessVideoModerationResponse }>(
+    `/admin/business-videos/${videoId}/approve`
+  );
+  return response.data.data;
+}
+
+export async function rejectBusinessVideo(
+  videoId: string,
+  rejectionReason: string
+): Promise<BusinessVideoModerationResponse> {
+  const response = await apiClient.post<{ data: BusinessVideoModerationResponse }>(
+    `/admin/business-videos/${videoId}/reject`,
+    { rejectionReason }
+  );
+  return response.data.data;
+}
+
+export async function requestBusinessVideoResubmission(
+  videoId: string,
+  resubmissionReason: string
+): Promise<BusinessVideoModerationResponse> {
+  const response = await apiClient.post<{ data: BusinessVideoModerationResponse }>(
+    `/admin/business-videos/${videoId}/resubmission`,
+    { resubmissionReason }
+  );
+  return response.data.data;
 }

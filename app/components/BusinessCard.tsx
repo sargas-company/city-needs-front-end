@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileVideo } from 'lucide-react';
 
 interface BusinessCardProps {
   business: {
@@ -33,6 +33,10 @@ interface BusinessCardProps {
       sizeBytes: number;
       originalName: string;
     } | null;
+    video?: {
+      processingStatus: string;
+      status: string;
+    } | null;
     createdAt: string;
   };
   onStatusToggle?: (businessId: string, currentStatus: string) => void;
@@ -54,12 +58,20 @@ const BusinessCard = forwardRef<HTMLDivElement, BusinessCardProps>(
       onStatusToggle?.(business.id, business.status);
     };
 
+    const showVideoIcon =
+      business.video?.processingStatus === 'READY' &&
+      business.video?.status === 'PENDING';
+
     return (
       <div
         ref={ref}
         onClick={handleCardClick}
-        className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+        className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer relative"
       >
+        {showVideoIcon && (
+          <FileVideo className="w-5 h-5 text-red-500 absolute top-4 right-4" />
+        )}
+
         {/* Business Header */}
         <div className="flex items-center gap-4 mb-4">
           <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
