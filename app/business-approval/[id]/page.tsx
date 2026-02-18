@@ -474,10 +474,10 @@ export default function VerificationDetailPage() {
                         setShowVideoReviewModal(true);
                       }
                     }}
-                    className={`text-sm text-gray-700 ${
+                    className={`text-sm px-4 py-1.5 rounded-lg border ${
                       business.video.status === 'PENDING'
-                        ? 'cursor-pointer hover:text-gray-900'
-                        : 'cursor-default'
+                        ? 'border-orange-300 bg-orange-50 text-orange-600 cursor-pointer hover:bg-orange-100'
+                        : 'border-gray-300 text-gray-700 cursor-default'
                     }`}
                   >
                     {business.video.status.charAt(0) + business.video.status.slice(1).toLowerCase()}
