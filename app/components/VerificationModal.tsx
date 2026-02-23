@@ -217,15 +217,15 @@ export default function VerificationModal({
         </div>
 
         {verification.status === "PENDING" && (
-          <div className="flex items-center justify-between p-6 border-t border-gray-200">
-            <button
-              onClick={() => setShowResubmissionModal(true)}
-              disabled={isApproving}
-              className="flex items-center gap-2 text-blue-900 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Request re-submission
-            </button>
+          <div className="flex items-center justify-end p-6 border-t border-gray-200">
+            {/*<button*/}
+            {/*  onClick={() => setShowResubmissionModal(true)}*/}
+            {/*  disabled={isApproving}*/}
+            {/*  className="flex items-center gap-2 text-blue-900 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"*/}
+            {/*>*/}
+            {/*  <RotateCcw className="w-4 h-4" />*/}
+            {/*  Request re-submission*/}
+            {/*</button>*/}
 
             <div className="flex items-center gap-3">
               <button
@@ -233,7 +233,7 @@ export default function VerificationModal({
                 disabled={isApproving}
                 className="px-8 py-3 border border-gray-300 rounded-full text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Reject
+                Request re-submission
               </button>
               <button
                 onClick={handleApproveClick}

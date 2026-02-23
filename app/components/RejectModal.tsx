@@ -31,9 +31,9 @@ export default function RejectModal({ onClose, onReject }: RejectModalProps) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full m-4 p-8">
         {/* Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Reject Business</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Request re-submission Business</h2>
         <p className="text-gray-600 mb-6">
-          Please specify the reason for rejection. This message will be sent to the business owner.
+          Please specify what documents or information are missing
         </p>
 
         {/* Textarea */}
@@ -59,7 +59,7 @@ export default function RejectModal({ onClose, onReject }: RejectModalProps) {
             className="px-12 py-3 bg-blue-900 text-white rounded-full font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isRejecting && <Loader2 className="w-4 h-4 animate-spin" />}
-            Reject Business
+            Send request
           </button>
         </div>
       </div>
