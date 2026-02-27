@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { removeToken, setToken, isAdmin } from '@/lib/auth';
@@ -26,14 +26,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/privacy', '/support'];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   // Listen to Firebase auth state changes
   useEffect(() => {
@@ -77,17 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Redirect logic
+  // Redirect to login if not authenticated
+  // This AuthProvider is only used in dashboard routes, so we always redirect if no user
   useEffect(() => {
-    if (!isLoading) {
-      const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
-      if (!user && !isPublicRoute) {
-        router.push('/login');
-      } else if (user && pathname === '/login') {
-        router.push('/');
-      }
+    if (!isLoading && !user) {
+      router.push('/login');
     }
-  }, [user, isLoading, pathname, router]);
+  }, [user, isLoading, router]);
 
   const logout = async () => {
     try {

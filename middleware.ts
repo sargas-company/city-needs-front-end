@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ['/login', '/privacy', '/support'];
+
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Allow access to login page without authentication
-  if (pathname === '/login') {
-    // If user is already authenticated, redirect to home
-    if (token) {
+  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+
+  // Allow access to public routes without authentication
+  if (isPublicRoute) {
+    // If user is already authenticated and on login page, redirect to home
+    if (token && pathname === '/login') {
       return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();

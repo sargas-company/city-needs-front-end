@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import DashboardLayout from './components/DashboardLayout';
-import BusinessCard from './components/BusinessCard';
-import FilterBar from './components/FilterBar';
+import DashboardLayout from '@/app/components/DashboardLayout';
+import BusinessCard from '@/app/components/BusinessCard';
+import FilterBar from '@/app/components/FilterBar';
 import {
   activateBusiness,
   deactivateBusiness,
