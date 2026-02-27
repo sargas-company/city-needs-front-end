@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Redirect logic
   useEffect(() => {
     if (!isLoading) {
-      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+      const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
       if (!user && !isPublicRoute) {
         router.push('/login');
       } else if (user && pathname === '/login') {
