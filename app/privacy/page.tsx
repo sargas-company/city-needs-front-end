@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
         <header className="mb-12">
           <Link
             href="/"
-            className="text-orange-600 hover:text-orange-700 text-sm font-medium mb-6 inline-block"
+            className="text-brand hover:text-brand-light hover:underline text-sm font-medium mb-6 inline-block"
           >
             &larr; Back to Dashboard
           </Link>
@@ -42,7 +42,7 @@ export default function PrivacyPolicyPage() {
         </header>
 
         {/* Table of Contents */}
-        <nav className="mb-12 p-6 bg-gray-50 rounded-lg">
+        <nav className="mb-12 p-6 bg-brand-light/5 border border-brand-light/10 rounded-lg">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Table of Contents
           </h2>
@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
               <li key={section.id}>
                 <a
                   href={`#${section.id}`}
-                  className="text-orange-600 hover:text-orange-700 hover:underline text-sm"
+                  className="text-brand hover:text-brand-light hover:underline text-sm"
                 >
                   {section.title}
                 </a>
@@ -211,7 +211,7 @@ export default function PrivacyPolicyPage() {
                   href="https://firebase.google.com/support/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-orange-600 hover:underline"
+                  className="text-brand hover:text-brand-light hover:underline"
                 >
                   Firebase Privacy Policy
                 </a>
@@ -222,7 +222,7 @@ export default function PrivacyPolicyPage() {
                   href="https://stripe.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-orange-600 hover:underline"
+                  className="text-brand hover:text-brand-light hover:underline"
                 >
                   Stripe Privacy Policy
                 </a>
@@ -233,7 +233,7 @@ export default function PrivacyPolicyPage() {
                   href="https://policies.google.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-orange-600 hover:underline"
+                  className="text-brand hover:text-brand-light hover:underline"
                 >
                   Google Privacy Policy
                 </a>
@@ -352,7 +352,7 @@ export default function PrivacyPolicyPage() {
               Alternatively, you can email us at{' '}
               <a
                 href="mailto:privacy@cityneeds.app"
-                className="text-orange-600 hover:underline"
+                className="text-brand hover:text-brand-light hover:underline"
               >
                 privacy@cityneeds.app
               </a>{' '}
@@ -421,7 +421,7 @@ export default function PrivacyPolicyPage() {
                 <strong>Email:</strong>{' '}
                 <a
                   href="mailto:privacy@cityneeds.app"
-                  className="text-orange-600 hover:underline"
+                  className="text-brand hover:text-brand-light hover:underline"
                 >
                   privacy@cityneeds.app
                 </a>
@@ -430,7 +430,7 @@ export default function PrivacyPolicyPage() {
                 <strong>Support:</strong>{' '}
                 <a
                   href="mailto:support@cityneeds.app"
-                  className="text-orange-600 hover:underline"
+                  className="text-brand hover:text-brand-light hover:underline"
                 >
                   support@cityneeds.app
                 </a>
