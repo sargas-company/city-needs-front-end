@@ -26,6 +26,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ['/login', '/privacy'];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Redirect logic
   useEffect(() => {
     if (!isLoading) {
-      if (!user && pathname !== '/login') {
+      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+      if (!user && !isPublicRoute) {
         router.push('/login');
       } else if (user && pathname === '/login') {
         router.push('/');
